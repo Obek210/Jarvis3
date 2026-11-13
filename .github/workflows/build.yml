@@ -1,0 +1,41 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Zipni ochish
+        run: |
+          mkdir unzipped
+          unzip -q ./*.zip -d unzipped
+          DIR=$(dirname "$(find unzipped -name settings.gradle.kts | head -1)")
+          echo "PROJECT_DIR=$DIR" >> $GITHUB_ENV
+          sed -i 's#"openrouter/auto"#"openrouter/free"#' "$(find "$DIR" -name JarvisService.kt)"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.5'
+
+      - name: APK yig'ish
+        run: |
+          cd "$PROJECT_DIR"
+          gradle assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Jarvis-apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
